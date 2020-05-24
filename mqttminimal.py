@@ -9,14 +9,14 @@ import machine
 
 class RetainM5mqtt(M5mqtt):
     
-    def publish(self, topic, data):
+    def publish(self, topic, data, retain=False, qos=0):
         if type(topic) is int:
             topic = str(topic)
         if type(data) is int:
             data = str(data)
         if self.mqttState:
             try:
-                self.mqtt.publish(topic, data, retain=True)
+                self.mqtt.publish(topic, data, retain=retain, qos=qos)
             except:
                 self.mqttState = False
 
@@ -47,9 +47,11 @@ m5mqtt.start()
 
 while True:
     wificheck()
-    t_dict = { "ticks": time.ticks_ms(), 'msg': 'waiter' }
+    t_dict = { "ticks": time.ticks_ms(), 'msg': 'light sleeper' }
     s_dict = json.dumps(t_dict)
-    m5mqtt.publish('timer/ticks',s_dict)
+    m5mqtt.publish('timer/ticks',s_dict, retain=True, qos=1) # qos is needed with lightsleep!
     blink('green')
-    wait(20)
+    #wait(60)
+    machine.lightsleep(60000)
+
 

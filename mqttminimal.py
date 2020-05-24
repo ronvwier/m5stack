@@ -47,11 +47,11 @@ m5mqtt.start()
 
 while True:
     wificheck()
-    t_dict = { "ticks": time.ticks_ms(), 'msg': 'light sleeper' }
+    t_dict = { "ticks": time.ticks_ms(), 'msg': 'wait sleeper' }
     s_dict = json.dumps(t_dict)
-    m5mqtt.publish('timer/ticks',s_dict, retain=True, qos=1) # qos is needed with lightsleep!
+    m5mqtt.publish('timer/ticks',s_dict, retain=True, qos=1) # qos=1 is needed with lightsleep!
     blink('green')
-    #wait(60)
-    machine.lightsleep(60000)
+    wait(60)
+    #machine.lightsleep(60000) # does it work?
 
 

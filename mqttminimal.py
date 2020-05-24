@@ -5,6 +5,21 @@ from m5mqtt import M5mqtt
 import unit
 import json
 import wifiCfg
+import machine
+
+class RetainM5mqtt(M5mqtt):
+    
+    def publish(self, topic, data):
+        if type(topic) is int:
+            topic = str(topic)
+        if type(data) is int:
+            data = str(data)
+        if self.mqttState:
+            try:
+                self.mqtt.publish(topic, data, retain=True)
+            except:
+                self.mqttState = False
+
 
 def blink(color):
     if color=='red':
@@ -15,27 +30,26 @@ def blink(color):
         setScreenColor(0xFFFF00)
     if color=='white':
         setScreenColor(0xFFFFFF)
-    wait(1)
-    setScreenColor(0x000000)    
+    wait_ms(150)
+    setScreenColor(0x404080)    
         
 def wificheck():
     while not wifiCfg.wlan_sta.isconnected():
         blink('red')
-        #wifiCfg.screenShow()
-        #wifiCfg.autoConnect(lcdShow = False)
         wifiCfg.reconnect()
     blink('white')    
-    
+
+lcd.setBrightness(5)
 wificheck()
 
-m5mqtt = M5mqtt('mqttenv', '192.168.0.129', 1883, '', '', 300)
+m5mqtt = RetainM5mqtt('mqttminimal', '192.168.0.129', 1883, '', '', 3000)
 m5mqtt.start()
 
 while True:
     wificheck()
-    t_dict = { "ticks": time.ticks_ms(), 'msg': 'hope' }
+    t_dict = { "ticks": time.ticks_ms(), 'msg': 'waiter' }
     s_dict = json.dumps(t_dict)
     m5mqtt.publish('timer/ticks',s_dict)
     blink('green')
-    
-    wait(5)
+    wait(20)
+

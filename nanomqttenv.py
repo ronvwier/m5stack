@@ -5,14 +5,13 @@ from m5mqtt import M5mqtt
 import unit
 import json
 import network
+import machine
 
 class RetainM5mqtt(M5mqtt):
     
     def publish(self, topic, data, retain=False, qos=0):
-        if type(topic) is int:
-            topic = str(topic)
-        if type(data) is int:
-            data = str(data)
+        topic = str(topic)
+        data = str(data)
         if self.mqttState:
             try:
                 self.mqtt.publish(topic, data, retain=retain, qos=qos)
@@ -59,4 +58,5 @@ while True:
     m5mqtt.publish('env/out',s_dict,retain=True)
     print("env/out " + str(s_dict))
     blink('green')
-    wait(10)
+    #wait(10)
+    machine.deepsleep(30000)

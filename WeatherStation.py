@@ -1,66 +1,112 @@
 from m5stack import *
 from m5ui import *
 from uiflow import *
-import unit
+import i2c_bus
+import json
+import network
 
-setScreenColor(0x000000)
-env0 = unit.get(unit.ENV, unit.PORTA)
+from m5mqtt import M5mqtt
+
+def wificheck():
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+        
+    while not wlan.isconnected():
+        #blink('red')
+        wifi = cfgRead('wifi')
+        print('connecting to network...',wifi)
+        wlan.connect(wifi['ssid'], wifi['password'])
+        wait(1)
+
+class PatchedM5mqtt(M5mqtt):
+    
+    # Make retainable messages possible
+    def publish(self, topic, data, retain=False, qos=0):
+        if type(topic) is int:
+            topic = str(topic)
+        if type(data) is int:
+            data = str(data)
+        if self.mqttState:
+            try:
+                self.mqtt.publish(topic, data, retain=retain, qos=qos)
+            except:
+                self.mqttState = False
+
+    def subscribe(self, topic, callback):
+        # Add callback first before subscribe! otherwise timing error
+        self.topic_callback[topic] = callback
+        print('topic =',topic)
+        self.mqtt.subscribe(topic)
+        
+    def _on_data(self, topic, data):
+        print('topic received:',topic)
+        print('data received:',data)
+        stopic = str(topic,'utf-8')
+        sdata = str(data,'utf-8')
+        print('stopic:',topic)
+        print('sdata:',data)
+        self.topic_callback[stopic](sdata)
 
 
+setScreenColor(0x222222)
+wificheck()
+print('Patched M5MQTT use')
+m5mqtt = PatchedM5mqtt('', '192.168.0.129', 1883, '', '', 300)
+
+title0 = M5Title(title="M5Stack2 Weatherstation", x=3 , fgcolor=0xFFFFFF, bgcolor=0x0000FF)
+s_temperature = M5TextBox(5, 80, "12.3", lcd.FONT_DejaVu24,0xFFFFFF, rotate=0)
+rectangle1 = M5Rect(220, 72, 100, 140, 0x944104, 0xFFFFFF)
+rectangle0 = M5Rect(0, 72, 100, 140, 0x01515a, 0xFFFFFF)
+s_pressure = M5TextBox(2, 187, "1234", lcd.FONT_DejaVu18,0xFFFFFF, rotate=0)
+s_humidity = M5TextBox(5, 130, "12", lcd.FONT_DejaVu24,0xFFFFFF, rotate=0)
+label3 = M5TextBox(80, 80, "C", lcd.FONT_Default,0xFFFFFF, rotate=0)
+label4 = M5TextBox(65, 185, "hPa", lcd.FONT_Default,0xFFFFFF, rotate=0)
+label5 = M5TextBox(80, 130, "%", lcd.FONT_Default,0xFFFFFF, rotate=0)
+s_temp_in = M5TextBox(224, 80, "12.3", lcd.FONT_DejaVu24,0xFFFFFF, rotate=0)
+s_hum_in = M5TextBox(224, 130, "12", lcd.FONT_DejaVu24,0xFFFFFF, rotate=0)
+s_date = M5TextBox(66, 36, "Mon 05 dec 2020", lcd.FONT_DejaVu18,0xFFFFFF, rotate=0)
+label0 = M5TextBox(300, 80, "C", lcd.FONT_Default,0xFFFFFF, rotate=0)
+label1 = M5TextBox(300, 130, "%", lcd.FONT_Default,0xFFFFFF, rotate=0)
+s_time = M5TextBox(120, 104, "12:35", lcd.FONT_DejaVu24,0xFFFFFF, rotate=0)
+
+t_env = None
+t_dict = None
+regs = None
+i2c0 = i2c_bus.easyI2C(i2c_bus.PORTA, 0x5c)
+
+from dht12 import DHT12
+dht12 = DHT12(i2c0.i2c)
+
+def read_dht12():
+  global t_env, t_dict, regs, i2c0, dht12
+  #regs = i2c0.read_reg(0x00, 5)
+  #s_temp_in.setText(str(regs[2]))
+  #s_hum_in.setText(str(regs[0]))
+  dht12.measure()
+  h = dht12.humidity()
+  s_hum_in.setText(str(h))
+  t = dht12.temperature()
+  s_temp_in.setText(str(t))
+  
+def fun_env_out_(topic_data):
+  global t_env, t_dict, regs
+  t_env = json.loads(topic_data)
+  s_temperature.setText(str(t_env['temperature']))
+  s_pressure.setText(str(t_env['pressure']))
+  s_humidity.setText(str(t_env['humidity']))
+  read_dht12()
+  pass
+m5mqtt.subscribe('env/out', fun_env_out_)
+
+def fun_time_display_(topic_data):
+  global t_env, t_dict, regs
+  t_dict = json.loads(topic_data)
+  s_date.setText(str(t_dict['date']))
+  s_time.setText(str(t_dict['time']))
+  pass
+m5mqtt.subscribe('time/display', fun_time_display_)
 
 
-circle4 = M5Circle(56, 61, 20, 0xff9900, 0x000000)
-circle2 = M5Circle(108, 99, 20, 0xFFFFFF, 0xFFFFFF)
-circle3 = M5Circle(88, 111, 20, 0xFFFFFF, 0xFFFFFF)
-circle0 = M5Circle(137, 98, 32, 0xFFFFFF, 0xFFFFFF)
-circle9 = M5Circle(115, 110, 20, 0xFFFFFF, 0xFFFFFF)
-labelTemp = M5TextBox(247, 52, "00 C", lcd.FONT_Comic,0xffffff, rotate=0)
-labelPressure = M5TextBox(226, 90, "1000 P", lcd.FONT_Comic,0xFFFFFF, rotate=0)
-labelHumidity = M5TextBox(247, 122, "00 %", lcd.FONT_Comic,0xFFFFFF, rotate=0)
-rect3 = M5Rect(91, 134, 1, 2, 0xFFFFFF, 0xFFFFFF)
-rect4 = M5Rect(112, 134, 1, 2, 0xFFFFFF, 0xFFFFFF)
-rect5 = M5Rect(135, 134, 1, 2, 0xFFFFFF, 0xFFFFFF)
-rect6 = M5Rect(159, 134, 1, 2, 0xFFFFFF, 0xFFFFFF)
-circle12 = M5Circle(164, 110, 20, 0xFFFFFF, 0xFFFFFF)
-
-import math
-import random
-
-random2 = None
-i = None
-
-
-
-while True:
-  labelTemp.setText(str((str(round(env0.temperature)) + ' C')))
-  labelPressure.setText(str((str(round(env0.pressure)) + ' P')))
-  labelHumidity.setText(str((str(round(env0.humidity)) + ' %')))
-  wait(1)
-  if (env0.humidity) >= 50:
-    circle4.setBgColor(0x000000)
-    rgb.setColorAll(0x000099)
-    rect3.setBorderColor(0x3333ff)
-    rect4.setBorderColor(0x3333ff)
-    rect5.setBorderColor(0x3333ff)
-    rect6.setBorderColor(0x3333ff)
-    random2 = random.randint(2, 50)
-    rect3.setSize(height=random2)
-    random2 = random.randint(2, 50)
-    rect4.setSize(height=random2)
-    random2 = random.randint(2, 50)
-    rect5.setSize(height=random2)
-    random2 = random.randint(2, 50)
-    rect6.setSize(height=random2)
-  else:
-    rect3.setBorderColor(0x000000)
-    rect4.setBorderColor(0x000000)
-    rect5.setBorderColor(0x000000)
-    rect6.setBorderColor(0x000000)
-    circle4.setBgColor(0xff6600)
-    rgb.setColorAll(0xff6600)
-    for i in range(20, 31):
-      lcd.circle(56, 61, i, color=0xff9900)
-      lcd.circle(56, 61, (i - 1), color=0x000000)
-      wait(0.05)
-    lcd.circle(56, 61, 30, color=0x000000)
-  wait_ms(2)
+m5mqtt.start()
+lcd.setBrightness(5)
+#read_dht12()

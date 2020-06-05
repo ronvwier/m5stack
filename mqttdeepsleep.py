@@ -69,6 +69,7 @@ m5mqtt.publish('timer/ticks',s_dict, retain=True, qos=1) # qos=1 is needed with 
 blink('green')
 
 # sleep 60 seconds and restart the machine
-machine.deepsleep(60000) 
+print('going to deepsleep for 30 sec')
+machine.deepsleep(30000) 
 
 

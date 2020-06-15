@@ -63,10 +63,13 @@ def wificheck():
         wlan.connect(wifi['ssid'], wifi['password'])
         wait(4)
 
+    print('network config:', wlan.ifconfig())
+    #blink('white')    
+
 
 wificheck()
 print('Patched M5MQTT use')
-m5mqtt = PatchedM5mqtt('', '192.168.0.129', 1883, '', '', 0)
+m5mqtt = PatchedM5mqtt('weatherNextion', '192.168.0.129', 1883, '', '', 300)
 
 t_env = None
 t_dict = None
@@ -89,18 +92,11 @@ def read_dht12():
   
 def fun_env_out_(topic_data):
   t_env = json.loads(topic_data)
-  #s_temperature.setText(str(t_env['temperature']))
-  #s_pressure.setText(str(t_env['pressure']))
-  #s_humidity.setText(str(t_env['humidity']))
-  sendNextion('global.temperature.txt="'+t_env['temperature']+' C"')
-  sendNextion('global.humidity.txt="'+t_env['humidity']+' %"')
-  sendNextion('global.pressure.txt="'+t_env['pressure']+' hPa"')
+  sendNextion('global.temperature.txt="'+t_env['temperature']+'"')
+  sendNextion('global.humidity.txt="'+t_env['humidity']+'"')
+  sendNextion('global.pressure.txt="'+t_env['pressure']+'"')
   print(t_env['temperature'])
   temp = int(float(t_env['temperature']) + 50)
-  sendNextion('page 1')
-  sendNextion('add 3,0,'+str(temp))
-  sendNextion('add 3,1,'+t_env['humidity'])
-  sendNextion('page 0')
   read_dht12()
   pass
 m5mqtt.subscribe('env/out', fun_env_out_)

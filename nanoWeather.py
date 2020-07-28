@@ -114,6 +114,11 @@ def fun_sun_home_(topic_data):
   pass
 m5mqtt.subscribe('sun/home', fun_sun_home_)
 
+def fun_env_out_rain_(topic_data):
+  sendNextion('global.rain.val='+topic_data)
+  pass
+m5mqtt.subscribe('env/out/rain', fun_env_out_rain_)
+
 m5mqtt.start()
 #lcd.setBrightness(5)
 #read_dht12()
